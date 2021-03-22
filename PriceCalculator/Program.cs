@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PriceCalculator.Model;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,6 +7,8 @@ namespace PriceCalculator
 {
     class Program
     {
+        public static string PartFile = @"D:\Promotion.txt";
+
         static void Main(string[] args)
         {
             //----------------------------input value---------------------------------//
@@ -20,95 +23,96 @@ namespace PriceCalculator
             //------------------------------------------------------------------------//
 
             var totalPrice = numberOfCustomers * pricePerPerson;
-            var ruleWithTotalPrice = CalculatePrice(numberOfCustomers, totalPrice, conponCode);
+            var prices = CalculatePrice(numberOfCustomers, totalPrice, conponCode);
 
-            if (ruleWithTotalPrice.Count > 0)
+            if (prices.Count > 0)
             {
                 // find price that customer pay least.
-                var pay = FindPricesLeast(ruleWithTotalPrice);
+                var pay = FindPricesLeast(prices);
                 Console.WriteLine(pay.ToString());
             }
             else
             {
                 Console.WriteLine(totalPrice.ToString());
             }
+
+            Console.ReadLine();
         }
 
-        private static decimal FindPricesLeast(Dictionary<int, decimal> ruleWitnTotalPrice)
+        private static decimal FindPricesLeast(List<decimal> prices)
         {
-            return ruleWitnTotalPrice.Values.Min();
+            return prices.Min();
         }
 
-        private static Dictionary<int, decimal> CalculatePrice(int customers, decimal prices, string coupon)
+        private static Promotion ConvertData(string[] values)
         {
-            // Rule
+            var promotion = new Promotion();
+            if (decimal.TryParse(values[0], out var price))
+            {
+                promotion.Price = price;
+            }
+
+            if (!string.IsNullOrEmpty(values[1]))
+            {
+                promotion.Code = values[1].ToString();
+            }
+
+            if (int.TryParse(values[2], out var custumers))
+            {
+                promotion.NumberCustomer = custumers;
+            }
+
+            if (decimal.TryParse(values[3], out var discount))
+            {
+                promotion.Discount = discount;
+            }
+
+            return promotion;
+        }
+
+        private static List<decimal> CalculatePrice(int customerInputNumber, decimal totalPrice, string coupon)
+        {
+            var prices = new List<decimal>();
+
+            // Currenly Rule
             //  1.Discount 10 % when customer present coupon code "DIS10" or price is more / equal than 2000 baht
             //  2.Discount 30 % when customer present coupon code "STARCARD" for 2 customers
-            //  3.Come 4 pay 3 when customer present coupon code "STARCARD"
+            //  3.Come 4 pay 3 when customer present coupon code "STARCARD" ***discount 25%
             //  4.Discount 25 % when price more / equal that 2500 baht.
 
-            var rule_totalPrices = new Dictionary<int, decimal>(); // key is rule and and value is money to be paid!!
+            var promotions = new List<Promotion>();
 
-            if (!string.IsNullOrEmpty(coupon)) // calculate from coupon first
+            // read file
+            string[] lines = System.IO.File.ReadAllLines(PartFile);
+            foreach (string line in lines)
             {
-                if (coupon.Equals("DIS10"))
-                {
-                    var (rule, totalPrice) = CalculateRuleOne(prices);
-                    rule_totalPrices.Add(rule, totalPrice);
-                }
+                var values = line.Split(',');
+                promotions.Add(ConvertData(values));
+            }
 
-                if (coupon.Equals("STARCARD"))
+            // calculate
+            foreach (var promotion in promotions)
+            {
+                if (!string.IsNullOrEmpty(coupon) && (promotion.Code != null))
                 {
-                    if (customers == 2)
+                    if (promotion.Code.Equals(coupon) && promotion.NumberCustomer == customerInputNumber)
                     {
-                        var (rule, totalPrice) = CalculateRuleTwo(prices);
-                        rule_totalPrices.Add(rule, totalPrice);
-                    }
-                    else if (customers == 4)
-                    {
-                        var (rule, totalPrice) = CalculateRuleThree(prices);
-                        rule_totalPrices.Add(rule, totalPrice);
+                        prices.Add(CalculateDiscount(totalPrice, promotion.Discount));
                     }
                 }
+
+                if (totalPrice >= promotion.Price && promotion.Price > 0)
+                {
+                    prices.Add(CalculateDiscount(totalPrice, promotion.Discount));
+                }
             }
 
-            if (prices >= 2500)
-            {
-                var (rule, totalPrice) = CalculateRuleFour(prices);
-                rule_totalPrices.Add(rule, totalPrice);
-            }
-
-            if (prices >= 2000 && prices < 2500)
-            {
-                var (rule, totalPrice) = CalculateRuleOne(prices);
-                rule_totalPrices.Add(rule, totalPrice);
-            }
-
-            return rule_totalPrices;
+            return prices;
         }
 
-        private static (int rule, decimal totalPrice) CalculateRuleOne(decimal price)
+        private static decimal CalculateDiscount(decimal totalPrice, decimal discount)
         {
-            // discount 10%
-            return (1, price - (price * 0.1m));
-        }
-
-        private static (int rule, decimal totalPrice) CalculateRuleTwo(decimal price)
-        {
-            // discount 30%
-            return (2, price - (price * 0.3m));
-        }
-
-        private static (int rule, decimal totalPrice) CalculateRuleThree(decimal price)
-        {
-            // come 4 pay 3
-            return (3, price - (price / 4));
-        }
-
-        private static (int rule, decimal totalPrice) CalculateRuleFour(decimal price)
-        {
-            // discount 25%
-            return (4, price - (price * 0.25m));
+            return totalPrice - (totalPrice * (discount/100));
         }
     }
 }
