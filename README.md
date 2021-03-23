@@ -6,5 +6,5 @@
 
 - First    : `price`      -> minimum is 0 bath
 - Second   : `coupon`     -> if not want to add the coupon please input emtpy
-- Third    : `customers`  -> minimum is 1 person
+- Third    : `customers`  -> minimum is 0 person
 - Fourth   : `discount`   -> should assume to %
