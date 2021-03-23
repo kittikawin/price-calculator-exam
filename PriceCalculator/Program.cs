@@ -95,9 +95,17 @@ namespace PriceCalculator
             {
                 if (!string.IsNullOrEmpty(coupon) && (promotion.Code != null))
                 {
-                    if (promotion.Code.Equals(coupon) && promotion.NumberCustomer == customerInputNumber)
+                    if (promotion.Code.Equals(coupon))
                     {
-                        prices.Add(CalculateDiscount(totalPrice, promotion.Discount));
+                        if (promotion.NumberCustomer > 0 && promotion.NumberCustomer == customerInputNumber)
+                        {
+                            prices.Add(CalculateDiscount(totalPrice, promotion.Discount));
+                        }
+
+                        if (promotion.NumberCustomer == 0)
+                        {
+                            prices.Add(CalculateDiscount(totalPrice, promotion.Discount));
+                        }
                     }
                 }
 
